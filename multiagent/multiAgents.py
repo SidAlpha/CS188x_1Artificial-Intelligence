@@ -16,6 +16,8 @@ from util import manhattanDistance
 from game import Directions
 import random, util
 
+import numpy as np
+
 from math import sqrt
 from game import Agent
 
@@ -71,14 +73,14 @@ class ReflexAgent(Agent):
           return sqrt ((b[0] - a[0])**2 + (b[1] - a[1])**2)
 
         if   len([dist(capDist,successorGameState.getPacmanPosition()) for capDist in currentGameState.getCapsules()]) > 0:
-          CapDist = (min([dist(capDist,successorGameState.getPacmanPosition()) for capDist in currentGameState.getCapsules()]) +1)
+          CapDist = (min([dist(capDist,newPos) for capDist in currentGameState.getCapsules()]) +1)
         else: 
           CapDist = 0
 
         foodPos = successorGameState.getFood().asList() 
         foodDist = []
         for food in foodPos:
-         foodDist.append(dist(food,successorGameState.getPacmanPosition()))
+         foodDist.append(dist(food,newPos))
 
 
         if len(foodDist) > 1:
@@ -88,9 +90,14 @@ class ReflexAgent(Agent):
 
         #print(closeFood)
 
-        GhostDist = (min([dist(capDist,successorGameState.getPacmanPosition()) for capDist in currentGameState.getGhostPositions()]) +1)
+        if successorGameState.getNumFood() > 1:
+          numFood = successorGameState.getNumFood()
+        else:
+          numFood = 10
 
-        x = successorGameState.getScore() - CapDist + 2*GhostDist - 3*successorGameState.getNumFood() -2.5*closeFood
+        GhostDist = (min([dist(capDist,successorGameState.getPacmanPosition()) for capDist in successorGameState.getGhostPositions()]) +1)
+
+        x = successorGameState.getScore() - CapDist + 2.03*GhostDist -  numFood -2.53*closeFood
         return x
 
 def scoreEvaluationFunction(currentGameState):
@@ -138,18 +145,87 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
-        numAgents = gameState.getNumAgents()
-        def min_value(gameState):
-          value = -10**10
-         #for 
 
-          return value
+        curDepth = 0
+        curAgentindex = 0
+        v = self.minimax(gameState,curDepth,curAgentindex)
+        return v[1]
+        
+    def  minimax(self,gameState,curDepth,curAgentindex):
 
-        def max_value(gameState):
-          value = 10**10  
 
-          return value
-        util.raiseNotDefined()
+        if curAgentindex >= gameState.getNumAgents():
+            curAgentindex = 0
+            curDepth += 1
+
+        if curDepth == self.depth:
+            return self.evaluationFunction(gameState)
+
+        if curAgentindex == 0:
+            return self.max_value(gameState, curDepth,curAgentindex)
+        else:
+            return self.min_value(gameState, curDepth,curAgentindex)
+
+    def max_value(self,gameState,curDepth,curAgentindex):
+
+        v = (-1*np.Infinity,'wait')
+        
+        if not gameState.getLegalActions(curAgentindex):
+          return self.evaluationFunction(gameState)
+
+
+        for action in gameState.getLegalActions(curAgentindex):
+
+          if action == "Stop":
+            continue
+
+          retval = self.minimax(gameState.generateSuccessor(curAgentindex, action),curDepth,curAgentindex+1)
+
+          if type(retval) is tuple:
+                retval = retval[0] 
+
+
+          vNew = max(v[0], retval)
+
+          if vNew is not v[0]:
+            v = (vNew,action)
+
+        return v
+
+    def min_value(self,gameState,curDepth,curAgentindex):
+
+        v = (np.Infinity,'wait')
+        
+        if not gameState.getLegalActions(curAgentindex):
+          return self.evaluationFunction(gameState)
+
+
+        for action in gameState.getLegalActions(curAgentindex):
+
+          if action == "Stop":
+            continue
+
+          retval = self.minimax(gameState.generateSuccessor(curAgentindex, action),curDepth,curAgentindex+1)
+
+
+          if type(retval) is tuple:
+                retval = retval[0] 
+
+          vNew = min(v[0], retval)
+          
+          if vNew is not v[0]:
+            v = (vNew,action)
+
+        return v
+
+           
+
+        
+        
+        
+
+
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -160,8 +236,93 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
           Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        curDepth = 0
+        curAgentindex = 0
+        alpha = -1*np.Infinity
+        beta = np.Infinity
+        v = self.alpha_beta(gameState,curDepth,curAgentindex,alpha,beta)
+        return v[1]
+        
+    def  alpha_beta(self,gameState,curDepth,curAgentindex,alpha,beta):
+
+
+        if curAgentindex >= gameState.getNumAgents():
+            curAgentindex = 0
+            curDepth += 1
+
+        if curDepth == self.depth:
+            return self.evaluationFunction(gameState)
+
+        if curAgentindex == 0:
+            return self.max_value(gameState, curDepth,curAgentindex,alpha,beta)
+        else:
+            return self.min_value(gameState, curDepth,curAgentindex,alpha,beta)
+
+    def max_value(self,gameState,curDepth,curAgentindex,alpha,beta):
+
+        v = (-1*np.Infinity,'wait')
+        
+        if not gameState.getLegalActions(curAgentindex):
+          return self.evaluationFunction(gameState)
+
+
+        for action in gameState.getLegalActions(curAgentindex):
+
+          if action == "Stop":
+            continue
+
+          retval = self.alpha_beta(gameState.generateSuccessor(curAgentindex, action),curDepth,curAgentindex+1,alpha,beta)
+
+          if type(retval) is tuple:
+                retval = retval[0] 
+
+          if retval > beta:
+            return (retval,action)
+
+
+          alpha = max(retval,alpha)
+
+          
+          vNew = max(v[0], retval)
+
+          if vNew is not v[0]:
+            v = (vNew,action)
+
+        return v
+
+    def min_value(self,gameState,curDepth,curAgentindex,alpha,beta):
+
+        v = (np.Infinity,'wait')
+        
+        if not gameState.getLegalActions(curAgentindex):
+          return self.evaluationFunction(gameState)
+
+
+        for action in gameState.getLegalActions(curAgentindex):
+
+          if action == "Stop":
+            continue
+
+          retval = self.alpha_beta(gameState.generateSuccessor(curAgentindex, action),curDepth,curAgentindex+1,alpha,beta)
+
+
+          
+
+          if type(retval) is tuple:
+                retval = retval[0] 
+
+          if retval < alpha:
+            return (retval,action)
+          beta = min(retval,beta)
+
+         
+
+          vNew = min(v[0], retval)
+          
+          if vNew is not v[0]:
+            v = (vNew,action)
+
+        return v
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -174,8 +335,79 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           All ghosts should be modeled as choosing uniformly at random from their
           legal moves.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        curDepth = 0
+        curAgentindex = 0
+        v = self.expectimax(gameState,curDepth,curAgentindex)
+        return v[1]
+        
+    def  expectimax(self,gameState,curDepth,curAgentindex):
+
+
+        if curAgentindex >= gameState.getNumAgents():
+            curAgentindex = 0
+            curDepth += 1
+
+        if curDepth == self.depth:
+            return self.evaluationFunction(gameState)
+
+        if curAgentindex == 0:
+            return self.max_value(gameState, curDepth,curAgentindex)
+        else:
+            return self.exp_value(gameState, curDepth,curAgentindex)
+
+    def max_value(self,gameState,curDepth,curAgentindex):
+
+        v = (-1*np.Infinity,'wait')
+        
+        if not gameState.getLegalActions(curAgentindex):
+          return self.evaluationFunction(gameState)
+
+
+        for action in gameState.getLegalActions(curAgentindex):
+
+          if action == "Stop":
+            continue
+
+          retval = self.expectimax(gameState.generateSuccessor(curAgentindex, action),curDepth,curAgentindex+1)
+
+          if type(retval) is tuple:
+                retval = retval[0] 
+
+
+          vNew = max(v[0], retval)
+
+          if vNew is not v[0]:
+            v = (vNew,action)
+
+        return v
+
+    def exp_value(self,gameState,curDepth,curAgentindex):
+
+        v = (0,'wait')
+        vNew = 0
+        
+        if not gameState.getLegalActions(curAgentindex):
+          return self.evaluationFunction(gameState)
+
+        prob = 1.0/len(gameState.getLegalActions(curAgentindex))
+        for action in gameState.getLegalActions(curAgentindex):
+
+          if action == "Stop":
+            continue
+
+          retval = self.expectimax(gameState.generateSuccessor(curAgentindex, action),curDepth,curAgentindex+1)
+
+
+          if type(retval) is tuple:
+                retval = retval[0] 
+
+          vNew += prob*retval
+          
+          if vNew is not v[0]:
+            v = (vNew,action)
+
+        return v
+
 
 def betterEvaluationFunction(currentGameState):
     """
