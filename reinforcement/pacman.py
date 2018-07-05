@@ -206,7 +206,7 @@ class GameState:
     def hasWall(self, x, y):
         return self.data.layout.walls[x][y]
 
-    def isLose ( self ):
+    def isLose( self ):
         return self.data._lose
 
     def isWin( self ):
